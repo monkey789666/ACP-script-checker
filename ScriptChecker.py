@@ -134,10 +134,13 @@ def get_targets():
         f.write(string)
     startfile(f"{targets_file}")
         
-        
+def update(event):
+    canvas.configure(scrollregion=canvas.bbox("all"))
+def _on_mousewheel(event):
+   canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
 
 filename = select_file()
-
 
 global targets
 targets, string_list, chain = get_script()
@@ -146,14 +149,29 @@ root = tk.Tk()
 root.title(f'{basename(filename)}')
 # root.geometry('250x250')
 root.minsize(width=250, height=250)
+root.attributes('-topmost',True)
 
+# (column, row)
+# (0,0) of main(root) window; check list of targets
+box = tk.Canvas(root,width=300,height=600, borderwidth=1, relief="solid")
+box.grid(row=0,column=0, ipadx=5, ipady=5)
+canvas = tk.Canvas(box,width=290,height=600)
+canvas.grid(row=1,column=0,sticky='e')
+scrollbar = tk.Scrollbar(box, orient='vertical',command=canvas.yview)
+scrollbar.grid(column=1, row=1,sticky = 'ns')
 
+frame = tk.Frame(canvas)
+canvas.create_window((0,0),window=frame,anchor='nw')
+frame.bind("<Configure>", update)
+canvas.bind_all("<MouseWheel>", _on_mousewheel)
 
+canvas.config(yscrollcommand=scrollbar.set)
 
 row_index=0
-# targets
+# label of targets
+# put it in box prevent to scroll
 target_label_str = f"     Targets          \t    RA"
-target_label = tk.Label(root, text=target_label_str).grid(row=row_index, column=0, columnspan=3, sticky='w')
+target_label = tk.Label(box, text=target_label_str).grid(row=row_index, column=0, columnspan=3, sticky='w')
 row_index +=1 
 
 buttons = {
@@ -163,30 +181,34 @@ buttons = {
 
 for k in range(len(targets['index'])):
     if targets['obj_name'][k][0] == '=':
-        tk.Label(root, text=f"{targets['oneline'][k]}").grid(row=row_index, column=0, columnspan=3, sticky='w')
+        tk.Label(frame, text=f"{targets['oneline'][k]}").grid(row=row_index, column=0, columnspan=3, sticky='w')
     elif '\t' in targets['oneline'][k]:
         buttons['var'][k] = tk.IntVar(value=targets['check'][k])
         tgt_name = targets['oneline'][k].split('\t')[0]
         tgt_ra = targets['oneline'][k].split('\t')[1]
-        buttons['checkbox'][k] = tk.Checkbutton(root, text=f'{tgt_name:12}\t{tgt_ra}', var=buttons['var'][k],onvalue=1,offvalue=0,).grid(row=row_index, column=0, columnspan=3, sticky='w')
+        buttons['checkbox'][k] = tk.Checkbutton(frame, text=f'{tgt_name:12}\t{tgt_ra}', var=buttons['var'][k],onvalue=1,offvalue=0,).grid(row=row_index, column=0, columnspan=3, sticky='w')
     else:
         buttons['var'][k] = tk.IntVar(value=targets['check'][k])
-        buttons['checkbox'][k] = tk.Checkbutton(root, text=targets['obj_name'][k], var=buttons['var'][k],onvalue=1,offvalue=0,).grid(row=row_index, column=0, columnspan=3, sticky='w')
+        buttons['checkbox'][k] = tk.Checkbutton(frame, text=targets['obj_name'][k], var=buttons['var'][k],onvalue=1,offvalue=0,).grid(row=row_index, column=0, columnspan=3, sticky='w')
     row_index+=1
 
-# chains
+
+# (1,0) of main window; check list of chain
+canvas_chain = tk.Canvas(root,width=200,height=600)
+canvas_chain.grid(row=0,column=2,sticky = 'ns')
+
 chain_row = 0
-chain_label = tk.Label(root, text="     Chain Script").grid(row=chain_row, column=3, sticky='w')
+chain_label = tk.Label(canvas_chain, text="     Chain Script").grid(row=chain_row, column=3, sticky='w')
 chain_row += 1
 
 var_chains = tk.StringVar()
 
 for k in range(len(chain['check'])):
-    tk.Radiobutton(root, text=chain['line'][k].replace('#CHAIN ', ''), var=var_chains, value=k).grid(row=chain_row, column=3, sticky='w')
+    tk.Radiobutton(canvas_chain, text=chain['line'][k].replace('#CHAIN ', ''), var=var_chains, value=k).grid(row=chain_row, column=3, sticky='w')
     chain_row += 1
     if chain['check'][k]:
         var_chains.set(k)
-tk.Radiobutton(root, text='none' , var=var_chains, value=k+1).grid(row=chain_row, column=3, sticky='w')
+tk.Radiobutton(canvas_chain, text='none' , var=var_chains, value=k+1).grid(row=chain_row, column=3, sticky='w')
 
 if not any(chain['check']):
     var_chains.set(k+1)
@@ -195,32 +217,40 @@ larger_row = max([chain_row, row_index])
 
 sep_label = tk.Label(root, text=' ').grid(row=larger_row, column=0, columnspan=3, sticky='w')
 
-larger_row += 1
+
+# (0,1) of main window;button of functions
 
 b_width = 8
 b_height = 2
+
+
 # 第一排按鈕
+canvas_button = tk.Canvas(root,width=200,height=600)
+canvas_button.grid(row=2,column=0,sticky = 'ns')
 
-checkbefore_button = tk.Button(text="check\nbefore first", width=b_width, height=b_height, command=check_before_first).grid(row=larger_row, column=0, sticky='w')
+checkbefore_button = tk.Button(canvas_button, text="check\nbefore first", width=b_width, height=b_height, command=check_before_first)
+checkbefore_button.grid(row=1, column=0, sticky='w')
 
-checkbefore_button = tk.Button(text="check\nafter first", width=b_width, height=b_height, command=check_after_first).grid(row=larger_row, column=1, sticky='w')
+checkbefore_button = tk.Button(canvas_button, text="check\nafter first", width=b_width, height=b_height, command=check_after_first)
+checkbefore_button.grid(row=1, column=1, sticky='w')
 
-checkbetween_button = tk.Button(text="check\nbetween", width=b_width, height=b_height, command=ckeck_between).grid(row=larger_row, column=2, sticky='w')
+checkbetween_button = tk.Button(canvas_button, text="check\nbetween", width=b_width, height=b_height, command=ckeck_between)
+checkbetween_button.grid(row=1, column=2, sticky='w')
 
-submit = tk.Button( text="Submit", width=b_width, height=b_height, command=submit).grid(row=larger_row, column=3, rowspan=2, sticky='w')
-
+submit = tk.Button(canvas_button, text="Submit", width=b_width, height=b_height, command=submit)
+submit.grid(row=1, column=3, rowspan=2, sticky='w')
 
 
 # 第二排按鈕
-larger_row+=1
+checkall_button = tk.Button(canvas_button, text="check all", width=b_width, height=b_height, command=check_all)
+checkall_button.grid(row=2, column=0, sticky='w')
 
-checkall_button = tk.Button(text="check all", width=b_width, height=b_height, command=check_all).grid(row=larger_row, column=0, sticky='w')
+uncheckall_button = tk.Button(canvas_button, text="uncheck all", width=b_width, height=b_height, command=uncheck_all)
+uncheckall_button.grid(row=2, column=1, sticky='w')
 
-uncheckall_button = tk.Button(text="uncheck all", width=b_width, height=b_height, command=uncheck_all).grid(row=larger_row, column=1, sticky='w')
-
-gettargets_button = tk.Button(text="get\ntargets", width=b_width, height=b_height, command=get_targets).grid(row=larger_row, column=2, sticky='w')
+gettargets_button = tk.Button(canvas_button, text="get\ntargets", width=b_width, height=b_height, command=get_targets)
+gettargets_button.grid(row=2, column=2, sticky='w')
 
 
 root.update()
-
 root.mainloop()
