@@ -107,16 +107,19 @@ def check_after_first():
         buttons['var'][k].set(value)
 
 def ckeck_between():
-    between = []
+    check_indexes = []
+    between_indexes = []
     for k in buttons['var'].keys():
         this_value = buttons['var'][k].get()
         if this_value == 1:
-            between.append(k)
-        if len(between) == 2:
+            check_indexes.append(k)
+        if len(check_indexes) == 1:
+            between_indexes.append(k)
+        if len(check_indexes) == 2:
+            between_indexes.append(k)
             break
-    check_index = list(range(between[0], between[1]+1, 1))
     uncheck_all()
-    for k in check_index:
+    for k in between_indexes:
         buttons['var'][k].set(1)
 
 def get_targets():
